@@ -7,7 +7,9 @@ authors = [
     { name = "andreasheige", email = "a.heige.83@gmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "torch>=2.14.1",
+]
 
 [project.scripts]
 chessslm = "chessslm.cli:main"
