@@ -40,3 +40,24 @@ def create_examples_from_game(game: chess.pgn.Game) -> list[TrainingExample]:
         board.push(move)
 
     return examples
+
+
+def create_examples_from_games(
+    games: list[chess.pgn.Game],
+) -> list[TrainingExample]:
+    """Create training examples from multiple chess games.
+
+    Each game is converted independently into position -> move examples.
+    The resulting examples are then combined into one flat list that can
+    be passed to ChessDataset.
+
+    Game-level train/validation splitting should happen BEFORE calling
+    this function so examples from one game never leak across the split.
+    """
+
+    examples: list[TrainingExample] = []
+
+    for game in games:
+        examples.extend(create_examples_from_game(game))
+
+    return examples

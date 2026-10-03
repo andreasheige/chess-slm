@@ -1,13 +1,13 @@
 from pathlib import Path
 
-import chess.pgn
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
 from chessslm.data.dataset import ChessDataset
-from chessslm.data.examples import create_examples_from_game
-from chessslm.data.split import split_examples
+from chessslm.data.examples import create_examples_from_games
+from chessslm.data.pgn import load_games
+from chessslm.data.split import split_games
 from chessslm.device import get_device
 from chessslm.models.baseline import ChessBaseline
 from chessslm.training.checkpoint import load_checkpoint, save_checkpoint
@@ -18,7 +18,7 @@ from chessslm.training.train import evaluate, train_epoch
 # The goal at this stage is not to build a strong chess model.
 # We want to verify that the complete training pipeline works
 # before introducing larger datasets and more complex models.
-PGN_PATH = "data/raw/sample.pgn"
+PGN_PATH = Path("data/raw/MacKenzie.pgn")
 CHECKPOINT_PATH = Path("checkpoints/latest.pt")
 
 
@@ -37,33 +37,28 @@ def main() -> None:
     # which makes repeated experiments easier to compare.
     torch.manual_seed(42)
 
-    # Read one chess game from disk.
+    # Load every game from the PGN file.
     #
-    # python-chess parses the PGN and gives us a Game object that
-    # can be replayed move by move.
-    with open(PGN_PATH) as pgn_file:
-        game = chess.pgn.read_game(pgn_file)
+    # We keep games intact at this stage because train/validation splitting
+    # must happen before individual positions are extracted.
+    games = load_games(PGN_PATH)
 
-    # Convert the game into supervised learning examples:
+    # Split complete games rather than individual positions.
     #
-    # board position -> correct move
-    #
-    # One chess game therefore produces many training examples.
-    examples = create_examples_from_game(game)
-
-    # Split the examples into:
-    #
-    # training data:
-    #   used for gradient updates
-    #
-    # validation data:
-    #   never used for optimizer updates; only used to measure
-    #   how well the model performs on unseen examples
-    training_examples, validation_examples = split_examples(
-        examples,
+    # This prevents positions from the same game appearing in both the
+    # training and validation sets, which would leak information across
+    # the evaluation boundary.
+    training_games, validation_games = split_games(
+        games,
         validation_fraction=0.2,
         seed=42,
     )
+
+    # Only after the game-level split do we turn each side into individual
+    # supervised position -> move examples.
+    training_examples = create_examples_from_games(training_games)
+
+    validation_examples = create_examples_from_games(validation_games)
 
     # ChessDataset converts our domain-level TrainingExample objects
     # into tensors that PyTorch can work with.
@@ -137,6 +132,9 @@ def main() -> None:
     print(f"Training examples: {len(training_dataset)}")
     print(f"Validation examples: {len(validation_dataset)}")
     print(f"Training batches per epoch: {len(training_loader)}")
+    print(f"Games: {len(games)}")
+    print(f"Training games: {len(training_games)}")
+    print(f"Validation games: {len(validation_games)}")
 
     for epoch in range(
         start_epoch,
@@ -169,8 +167,8 @@ def main() -> None:
         # that never contribute gradients or optimizer updates.
         if epoch % 10 == 0:
             (
-                _train_from_acc,
-                _train_to_acc,
+                train_from_acc,
+                train_to_acc,
                 train_move_acc,
             ) = evaluate(
                 model,
@@ -179,8 +177,8 @@ def main() -> None:
             )
 
             (
-                _val_from_acc,
-                _val_to_acc,
+                val_from_acc,
+                val_to_acc,
                 val_move_acc,
             ) = evaluate(
                 model,
@@ -191,8 +189,12 @@ def main() -> None:
             print(
                 f"epoch={epoch:3d} "
                 f"loss={mean_loss:.4f} "
-                f"train_move_acc={train_move_acc:.2%} "
-                f"val_move_acc={val_move_acc:.2%}"
+                f"train_from={train_from_acc:.2%} "
+                f"train_to={train_to_acc:.2%} "
+                f"train_move={train_move_acc:.2%} "
+                f"val_from={val_from_acc:.2%} "
+                f"val_to={val_to_acc:.2%} "
+                f"val_move={val_move_acc:.2%}"
             )
 
     # Save the latest training state after the run has completed.

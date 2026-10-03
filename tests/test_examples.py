@@ -1,9 +1,12 @@
+import io
+
 import chess
 import chess.pgn
 
 from chessslm.data.examples import (
     TrainingExample,
     create_examples_from_game,
+    create_examples_from_games,
     create_training_example,
 )
 
@@ -49,3 +52,12 @@ def test_create_examples_from_game() -> None:
     third = examples[2]
     assert third.from_square == chess.G1
     assert third.to_square == chess.F3
+
+
+def test_create_examples_from_games_combines_games() -> None:
+    first_game = chess.pgn.read_game(io.StringIO("1. e4 e5 *"))
+    second_game = chess.pgn.read_game(io.StringIO("1. d4 d5 *"))
+
+    examples = create_examples_from_games([first_game, second_game])
+
+    assert len(examples) == 4

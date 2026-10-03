@@ -1,5 +1,7 @@
 from random import Random
 
+import chess.pgn
+
 from chessslm.data.examples import TrainingExample
 
 
@@ -37,3 +39,37 @@ def split_examples(
     training_examples = shuffled[validation_size:]
 
     return training_examples, validation_examples
+
+
+def split_games(
+    games: list[chess.pgn.Game],
+    validation_fraction: float = 0.2,
+    seed: int = 42,
+) -> tuple[list[chess.pgn.Game], list[chess.pgn.Game]]:
+    """Split complete games into training and validation sets.
+
+    Games are split before they are converted into individual position
+    examples. This prevents positions from the same game appearing in
+    both training and validation data.
+
+    Keeping complete games together gives us a more meaningful
+    validation set when training on multiple PGN games.
+    """
+
+    if not 0.0 < validation_fraction < 1.0:
+        raise ValueError("validation_fraction must be between 0 and 1")
+
+    shuffled = games.copy()
+
+    random = Random(seed)
+    random.shuffle(shuffled)
+
+    validation_size = max(
+        1,
+        round(len(shuffled) * validation_fraction),
+    )
+
+    validation_games = shuffled[:validation_size]
+    training_games = shuffled[validation_size:]
+
+    return training_games, validation_games

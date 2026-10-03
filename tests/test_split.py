@@ -1,5 +1,7 @@
+import chess.pgn
+
 from chessslm.data.examples import TrainingExample
-from chessslm.data.split import split_examples
+from chessslm.data.split import split_examples, split_games
 
 
 def make_example(index: int) -> TrainingExample:
@@ -46,3 +48,29 @@ def test_split_examples_is_reproducible() -> None:
     )
 
     assert first_split == second_split
+
+
+def make_game(name: str) -> chess.pgn.Game:
+    game = chess.pgn.Game()
+    game.headers["Event"] = name
+
+    return game
+
+
+def test_split_games_keeps_games_separate() -> None:
+    games = [make_game(f"Game {index}") for index in range(10)]
+
+    training_games, validation_games = split_games(
+        games,
+        validation_fraction=0.2,
+        seed=42,
+    )
+
+    assert len(training_games) == 8
+    assert len(validation_games) == 2
+
+    training_names = {game.headers["Event"] for game in training_games}
+
+    validation_names = {game.headers["Event"] for game in validation_games}
+
+    assert training_names.isdisjoint(validation_names)
