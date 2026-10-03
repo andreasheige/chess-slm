@@ -1,4 +1,5 @@
 import chess.pgn
+
 from chessslm.representation.board import encode_board
 
 PGN_PATH = "data/raw/sample.pgn"

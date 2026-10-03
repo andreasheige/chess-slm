@@ -1,6 +1,5 @@
 import chess
 
-
 EMPTY = 0
 
 PIECE_TO_ID = {
@@ -18,6 +17,9 @@ PIECE_TO_ID = {
     (chess.BLACK, chess.KING): 12,
 }
 
+ID_TO_PIECE = {value: key for key, value in PIECE_TO_ID.items()}
+
+
 def encode_board(board: chess.Board) -> list[int]:
     encoded = []
 
@@ -32,3 +34,19 @@ def encode_board(board: chess.Board) -> list[int]:
         encoded.append(piece_id)
 
     return encoded
+
+
+def decode_board(encoded: list[int]) -> chess.Board:
+    if len(encoded) != 64:
+        raise ValueError("Encoded board must contain exactly 64 squares")
+
+    board = chess.Board.empty()
+
+    for square, piece_id in enumerate(encoded):
+        if piece_id == EMPTY:
+            continue
+
+        color, piece_type = ID_TO_PIECE[piece_id]
+        board.set_piece_at(square, chess.Piece(piece_type, color))
+
+    return board

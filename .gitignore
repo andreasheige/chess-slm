@@ -1,0 +1,48 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env/
+
+# Packaging and build output
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# Generated datasets and model artifacts
+/data/raw/*
+!/data/raw/sample.pgn
+/data/processed/
+/artifacts/
+/checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Operating system clutter
+.DS_Store
+Thumbs.db
