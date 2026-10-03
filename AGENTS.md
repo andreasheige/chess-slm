@@ -87,3 +87,11 @@ At the end of a phase:
 - summarize what was learned,
 - identify unresolved questions,
 - stop before beginning the next phase unless explicitly instructed.
+
+## Warnings and errors
+
+- Never suppress a warning or error merely to make output clean.
+- Identify and understand the underlying cause first.
+- Fix the root cause when reasonably possible.
+- If a warning cannot reasonably be eliminated, document why it is accepted.
+- Warning suppression requires an explicit justification.
