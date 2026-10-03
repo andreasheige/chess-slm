@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -10,17 +8,14 @@ from chessslm.data.pgn import load_games
 from chessslm.data.split import split_games
 from chessslm.device import get_device
 from chessslm.models.baseline import ChessBaseline
+from chessslm.training.artifacts import (
+    load_metrics_history,
+    save_experiment_artifacts,
+)
 from chessslm.training.checkpoint import load_checkpoint, save_checkpoint
+from chessslm.training.config import TrainingConfig
+from chessslm.training.metrics import EpochMetrics
 from chessslm.training.train import evaluate, train_epoch
-
-# For now we deliberately train on one very small PGN file.
-#
-# The goal at this stage is not to build a strong chess model.
-# We want to verify that the complete training pipeline works
-# before introducing larger datasets and more complex models.
-PGN_PATH = Path("data/raw/MacKenzie.pgn")
-CHECKPOINT_PATH = Path("checkpoints/latest.pt")
-BEST_CHECKPOINT_PATH = Path("checkpoints/best.pt")
 
 
 def main() -> None:
@@ -30,7 +25,18 @@ def main() -> None:
     # On other machines it can fall back to CPU or use CUDA.
     device = get_device()
 
-    print(f"Device: {device}")
+    # TrainingConfig is a frozen dataclass that holds all the parameters
+    # for a single training run.
+    #
+    # Keeping experiment parameters in one object makes training runs
+    # easier to reproduce and compare.
+    config = TrainingConfig()
+
+    experiment_dir = config.artifact_dir / config.experiment_name
+
+    latest_checkpoint_path = experiment_dir / "latest.pt"
+
+    best_checkpoint_path = experiment_dir / "best.pt"
 
     # Neural network parameters are randomly initialized.
     #
@@ -42,7 +48,7 @@ def main() -> None:
     #
     # We keep games intact at this stage because train/validation splitting
     # must happen before individual positions are extracted.
-    games = load_games(PGN_PATH)
+    games = load_games(config.pgn_path)
 
     # Split complete games rather than individual positions.
     #
@@ -50,9 +56,7 @@ def main() -> None:
     # training and validation sets, which would leak information across
     # the evaluation boundary.
     training_games, validation_games = split_games(
-        games,
-        validation_fraction=0.2,
-        seed=42,
+        games, validation_fraction=config.validation_fraction, seed=config.seed
     )
 
     # Only after the game-level split do we turn each side into individual
@@ -70,14 +74,14 @@ def main() -> None:
     # examples in the same order.
     training_loader = DataLoader(
         training_dataset,
-        batch_size=8,
+        batch_size=config.batch_size,
         shuffle=True,
     )
 
     # Validation data is not shuffled because we are only evaluating it.
     validation_loader = DataLoader(
         validation_dataset,
-        batch_size=8,
+        batch_size=config.batch_size,
         shuffle=False,
     )
 
@@ -101,7 +105,7 @@ def main() -> None:
     # are changed during each optimizer step.
     optimizer = torch.optim.Adam(
         model.parameters(),
-        lr=0.001,
+        lr=config.learning_rate,
     )
 
     # Start from epoch 0 unless an existing checkpoint is restored.
@@ -121,9 +125,9 @@ def main() -> None:
     # - the epoch where training stopped
     #
     # Training then continues from the following epoch.
-    if CHECKPOINT_PATH.exists():
+    if latest_checkpoint_path.exists():
         (saved_epoch, best_val_move_acc) = load_checkpoint(
-            CHECKPOINT_PATH,
+            latest_checkpoint_path,
             model,
             optimizer,
             device,
@@ -132,13 +136,10 @@ def main() -> None:
         start_epoch = saved_epoch + 1
 
         print(
-            f"Checkpoint loaded: {CHECKPOINT_PATH} "
+            f"Checkpoint loaded: {latest_checkpoint_path} "
             f"(epoch {saved_epoch}, "
             f"best_val_move_acc={best_val_move_acc:.2%})"
         )
-
-    # One epoch means one complete pass through the training dataset.
-    epochs = 40
 
     print(f"Training examples: {len(training_dataset)}")
     print(f"Validation examples: {len(validation_dataset)}")
@@ -146,10 +147,21 @@ def main() -> None:
     print(f"Games: {len(games)}")
     print(f"Training games: {len(training_games)}")
     print(f"Validation games: {len(validation_games)}")
+    print(f"Device: {device}")
+    print(f"Seed: {config.seed}")
+    print(f"Batch size: {config.batch_size}")
+    print(f"Learning rate: {config.learning_rate}")
+    print(f"Epoch target: {config.epochs}")
+
+    # Restore metrics from earlier parts of this experiment.
+    #
+    # This keeps the learning curve continuous when training is resumed
+    # from a checkpoint in a new process.
+    history = load_metrics_history(experiment_dir)
 
     for epoch in range(
         start_epoch,
-        epochs + 1,
+        config.epochs + 1,
     ):
         # train_epoch performs:
         #
@@ -176,7 +188,7 @@ def main() -> None:
         #
         # Validation accuracy measures performance on examples
         # that never contribute gradients or optimizer updates.
-        if epoch % 10 == 0:
+        if epoch % config.log_every == 0:
             (
                 train_from_acc,
                 train_to_acc,
@@ -196,6 +208,19 @@ def main() -> None:
                 validation_loader,
                 device,
             )
+
+            metrics = EpochMetrics(
+                epoch=epoch,
+                loss=mean_loss,
+                train_from_acc=train_from_acc,
+                train_to_acc=train_to_acc,
+                train_move_acc=train_move_acc,
+                val_from_acc=val_from_acc,
+                val_to_acc=val_to_acc,
+                val_move_acc=val_move_acc,
+            )
+
+            history.append(metrics)
 
             print(
                 f"epoch={epoch:3d} "
@@ -218,7 +243,7 @@ def main() -> None:
                 best_val_move_acc = val_move_acc
 
                 save_checkpoint(
-                    BEST_CHECKPOINT_PATH,
+                    best_checkpoint_path,
                     model,
                     optimizer,
                     epoch=epoch,
@@ -230,6 +255,17 @@ def main() -> None:
                     f"val_move_acc={best_val_move_acc:.2%} "
                     f"epoch={epoch}"
                 )
+    # Preserve the configuration and evaluation history for this experiment.
+    #
+    # This gives us structured data for later comparison and visualization
+    # instead of relying only on terminal output.
+    save_experiment_artifacts(
+        experiment_dir,
+        config,
+        history,
+    )
+
+    print(f"Experiment artifacts saved: {experiment_dir}")
 
     # Save the latest training state after the run has completed.
     #
@@ -238,14 +274,14 @@ def main() -> None:
     # - optimizer state
     # - final epoch
     save_checkpoint(
-        CHECKPOINT_PATH,
+        latest_checkpoint_path,
         model,
         optimizer,
-        epoch=epochs,
+        config.epochs,
         best_val_move_acc=best_val_move_acc,
     )
 
-    print(f"Checkpoint saved: {CHECKPOINT_PATH}")
+    print(f"Checkpoint saved: {latest_checkpoint_path}")
 
 
 if __name__ == "__main__":
