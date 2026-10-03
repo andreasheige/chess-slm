@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import chess.pgn
 import torch
 from torch import nn
@@ -7,6 +9,7 @@ from chessslm.data.dataset import ChessDataset
 from chessslm.data.examples import create_examples_from_game
 from chessslm.device import get_device
 from chessslm.models.baseline import ChessBaseline
+from chessslm.training.checkpoint import load_checkpoint, save_checkpoint
 from chessslm.training.train import evaluate, train_epoch
 
 # For now we deliberately train on one very small PGN file.
@@ -15,6 +18,7 @@ from chessslm.training.train import evaluate, train_epoch
 # We want to verify that the complete training pipeline works
 # before introducing larger datasets and more complex models.
 PGN_PATH = "data/raw/sample.pgn"
+CHECKPOINT_PATH = Path("checkpoints/latest.pt")
 
 
 def main() -> None:
@@ -85,13 +89,35 @@ def main() -> None:
         lr=0.001,
     )
 
+    start_epoch = 0
+
+    # If a checkpoint already exists, restore the previous training state.
+    #
+    # This restores:
+    # - learned model parameters
+    # - optimizer state
+    # - the epoch where training stopped
+    #
+    # We then continue from the following epoch instead of starting over.
+    if CHECKPOINT_PATH.exists():
+        saved_epoch = load_checkpoint(
+            CHECKPOINT_PATH,
+            model,
+            optimizer,
+            device,
+        )
+
+    start_epoch = saved_epoch + 1
+
+    print(f"Checkpoint loaded: {CHECKPOINT_PATH} (epoch {saved_epoch})")
+
     # One epoch means one complete pass through the training dataset.
-    epochs = 100
+    epochs = 120
 
     print(f"Training examples: {len(dataset)}")
     print(f"Batches per epoch: {len(loader)}")
 
-    for epoch in range(epochs + 1):
+    for epoch in range(start_epoch, epochs + 1):
         # train_epoch performs:
         #
         # batch
@@ -130,6 +156,14 @@ def main() -> None:
                 f"to_acc={to_accuracy:.2%} "
                 f"move_acc={move_accuracy:.2%}"
             )
+    # Save AFTER training has completed.
+    save_checkpoint(
+        CHECKPOINT_PATH,
+        model,
+        optimizer,
+        epoch=epochs,
+    )
+    print(f"Checkpoint saved: {CHECKPOINT_PATH}")
 
 
 if __name__ == "__main__":
