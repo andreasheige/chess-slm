@@ -42,6 +42,7 @@ def train_epoch(
     loader: Iterable[dict[str, torch.Tensor]],
     optimizer: Optimizer,
     loss_fn: nn.CrossEntropyLoss,
+    device: torch.device,
 ) -> float:
     """Train the model for one complete pass over the dataset."""
 
@@ -51,8 +52,13 @@ def train_epoch(
     batch_count = 0
 
     for batch in loader:
-        # Gradients accumulate in PyTorch, so clear the previous
-        # batch before calculating new gradients.
+        # DataLoader creates tensors on CPU by default.
+        # Move the complete batch to the same device as the model.
+        batch = move_batch_to_device(
+            batch,
+            device,
+        )
+
         optimizer.zero_grad()
 
         loss = training_step(
@@ -61,10 +67,7 @@ def train_epoch(
             loss_fn,
         )
 
-        # Compute gradients for all trainable parameters.
         loss.backward()
-
-        # Update the model using those gradients.
         optimizer.step()
 
         total_loss += loss.item()
@@ -76,6 +79,7 @@ def train_epoch(
 def evaluate(
     model: ChessBaseline,
     loader: Iterable[dict[str, torch.Tensor]],
+    device: torch.device,
 ) -> tuple[float, float, float]:
     """Evaluate from-square, to-square, and full-move accuracy."""
 
@@ -88,6 +92,13 @@ def evaluate(
 
     with torch.no_grad():
         for batch in loader:
+            # Evaluation tensors must live on the same device
+            # as the model, just like during training.
+            batch = move_batch_to_device(
+                batch,
+                device,
+            )
+
             from_logits, to_logits, promotion_logits = model(
                 batch["board"],
                 batch["from_square"],
@@ -123,3 +134,19 @@ def evaluate(
         to_correct / total,
         move_correct / total,
     )
+
+
+def move_batch_to_device(
+    batch: dict[str, torch.Tensor],
+    device: torch.device,
+) -> dict[str, torch.Tensor]:
+    """Move every tensor in a training batch to the selected device.
+
+    PyTorch requires the model parameters and the tensors used by the
+    model to live on the same device.
+
+    Keeping this in one helper avoids repeating `.to(device)` for every
+    tensor throughout the training and evaluation code.
+    """
+
+    return {name: tensor.to(device) for name, tensor in batch.items()}

@@ -7,6 +7,8 @@ from chessslm.data.examples import TrainingExample
 from chessslm.models.baseline import ChessBaseline
 from chessslm.training.train import evaluate, train_epoch, training_step
 
+TEST_DEVICE = torch.device("cpu")
+
 
 def test_training_step_returns_scalar_loss() -> None:
     model = ChessBaseline()
@@ -77,6 +79,7 @@ def test_train_epoch_returns_mean_loss() -> None:
         loader,
         optimizer,
         loss_fn,
+        TEST_DEVICE,
     )
 
     assert mean_loss > 0
@@ -111,6 +114,7 @@ def test_evaluate_returns_accuracies() -> None:
     from_accuracy, to_accuracy, move_accuracy = evaluate(
         model,
         loader,
+        TEST_DEVICE,
     )
 
     assert 0.0 <= from_accuracy <= 1.0

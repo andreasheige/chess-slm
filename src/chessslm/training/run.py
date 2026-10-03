@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 
 from chessslm.data.dataset import ChessDataset
 from chessslm.data.examples import create_examples_from_game
+from chessslm.device import get_device
 from chessslm.models.baseline import ChessBaseline
 from chessslm.training.train import evaluate, train_epoch
 
@@ -17,6 +18,9 @@ PGN_PATH = "data/raw/sample.pgn"
 
 
 def main() -> None:
+    device = get_device()
+
+    print(f"Device: {device}")
     # Neural network parameters are randomly initialized.
     #
     # Setting a seed makes that initialization reproducible,
@@ -58,7 +62,7 @@ def main() -> None:
     # Create a fresh neural network.
     #
     # At this point all learnable parameters contain random values.
-    model = ChessBaseline()
+    model = ChessBaseline().to(device)
 
     # CrossEntropyLoss measures how wrong each classification head is.
     #
@@ -98,12 +102,7 @@ def main() -> None:
         #   -> optimizer step
         #
         # for every batch in the DataLoader.
-        mean_loss = train_epoch(
-            model,
-            loader,
-            optimizer,
-            loss_fn,
-        )
+        mean_loss = train_epoch(model, loader, optimizer, loss_fn, device)
 
         # Evaluating every epoch would work for this tiny experiment,
         # but normally evaluation has a cost.
@@ -114,10 +113,7 @@ def main() -> None:
                 from_accuracy,
                 to_accuracy,
                 move_accuracy,
-            ) = evaluate(
-                model,
-                loader,
-            )
+            ) = evaluate(model, loader, device)
 
             # from_acc:
             #   Did we predict the correct source square?
