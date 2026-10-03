@@ -1,6 +1,8 @@
+import torch
 from torch.utils.data import Dataset
 
 from chessslm.data.examples import TrainingExample
+from chessslm.representation.move import encode_promotion
 
 
 class ChessDataset(Dataset):
@@ -11,4 +13,13 @@ class ChessDataset(Dataset):
         return len(self.examples)
 
     def __getitem__(self, index: int) -> TrainingExample:
-        return self.examples[index]
+        example = self.examples[index]
+
+        return {
+            "board": torch.tensor(example.board, dtype=torch.long),
+            "from_square": torch.tensor(example.from_square, dtype=torch.long),
+            "to_square": torch.tensor(example.to_square, dtype=torch.long),
+            "promotion": torch.tensor(
+                encode_promotion(example.promotion), dtype=torch.long
+            ),
+        }
