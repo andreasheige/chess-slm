@@ -23,16 +23,6 @@ def test_move_round_trip() -> None:
     assert decoded.uci() == "g1f3"
 
 
-def test_move_round_trip() -> None:
-    original = chess.Move.from_uci("g1f3")
-
-    from_square, to_square, promotion = encode_move(original)
-    decoded = decode_move(from_square, to_square, promotion)
-
-    assert decoded == original
-    assert decoded.uci() == "g1f3"
-
-
 def test_promotion_round_trip() -> None:
     original = chess.Move.from_uci("e7e8q")
 
