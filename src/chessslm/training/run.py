@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 
 from chessslm.data.dataset import ChessDataset
 from chessslm.data.examples import create_examples_from_game
+from chessslm.data.split import split_examples
 from chessslm.device import get_device
 from chessslm.models.baseline import ChessBaseline
 from chessslm.training.checkpoint import load_checkpoint, save_checkpoint
@@ -22,14 +23,18 @@ CHECKPOINT_PATH = Path("checkpoints/latest.pt")
 
 
 def main() -> None:
+    # Select the best available compute device.
+    #
+    # On the current Mac this should resolve to MPS.
+    # On other machines it can fall back to CPU or use CUDA.
     device = get_device()
 
     print(f"Device: {device}")
+
     # Neural network parameters are randomly initialized.
     #
     # Setting a seed makes that initialization reproducible,
-    # which means repeated experiments start from the same weights
-    # and become much easier to compare.
+    # which makes repeated experiments easier to compare.
     torch.manual_seed(42)
 
     # Read one chess game from disk.
@@ -46,59 +51,74 @@ def main() -> None:
     # One chess game therefore produces many training examples.
     examples = create_examples_from_game(game)
 
+    # Split the examples into:
+    #
+    # training data:
+    #   used for gradient updates
+    #
+    # validation data:
+    #   never used for optimizer updates; only used to measure
+    #   how well the model performs on unseen examples
+    training_examples, validation_examples = split_examples(
+        examples,
+        validation_fraction=0.2,
+        seed=42,
+    )
+
     # ChessDataset converts our domain-level TrainingExample objects
     # into tensors that PyTorch can work with.
-    dataset = ChessDataset(examples)
+    training_dataset = ChessDataset(training_examples)
+    validation_dataset = ChessDataset(validation_examples)
 
-    # DataLoader is responsible for batching and shuffling.
-    #
-    # batch_size=8 means the model sees eight positions at once.
-    #
-    # shuffle=True changes the example order between epochs.
-    # This is typical during training and avoids always presenting
-    # positions in the exact order they occurred in the chess game.
-    loader = DataLoader(
-        dataset,
+    # Training data is shuffled so the model does not always see
+    # examples in the same order.
+    training_loader = DataLoader(
+        training_dataset,
         batch_size=8,
         shuffle=True,
     )
 
-    # Create a fresh neural network.
-    #
-    # At this point all learnable parameters contain random values.
+    # Validation data is not shuffled because we are only evaluating it.
+    validation_loader = DataLoader(
+        validation_dataset,
+        batch_size=8,
+        shuffle=False,
+    )
+
+    # Create a fresh neural network and move its parameters
+    # to the selected device.
     model = ChessBaseline().to(device)
 
     # CrossEntropyLoss measures how wrong each classification head is.
     #
     # Our model predicts:
-    #
     # - from_square
     # - to_square
     # - promotion
     #
-    # train_epoch() combines the three losses.
+    # training_step() combines the three losses.
     loss_fn = nn.CrossEntropyLoss()
 
-    # The optimizer uses gradients produced by backpropagation
-    # to update the model's learnable parameters.
+    # Adam uses gradients from backpropagation to update the model.
     #
-    # Adam adapts the size of parameter updates during training.
-    # lr is the learning rate: roughly how aggressively we update.
+    # lr is the learning rate: roughly how aggressively parameters
+    # are changed during each optimizer step.
     optimizer = torch.optim.Adam(
         model.parameters(),
         lr=0.001,
     )
 
+    # Start from epoch 0 unless an existing checkpoint is restored.
     start_epoch = 0
 
-    # If a checkpoint already exists, restore the previous training state.
+    # If a checkpoint exists, restore the previous training state.
     #
     # This restores:
     # - learned model parameters
     # - optimizer state
     # - the epoch where training stopped
     #
-    # We then continue from the following epoch instead of starting over.
+    # Training then continues from the following epoch.
     if CHECKPOINT_PATH.exists():
         saved_epoch = load_checkpoint(
             CHECKPOINT_PATH,
@@ -107,17 +127,21 @@ def main() -> None:
             device,
         )
 
-    start_epoch = saved_epoch + 1
+        start_epoch = saved_epoch + 1
 
-    print(f"Checkpoint loaded: {CHECKPOINT_PATH} (epoch {saved_epoch})")
+        print(f"Checkpoint loaded: {CHECKPOINT_PATH} (epoch {saved_epoch})")
 
     # One epoch means one complete pass through the training dataset.
-    epochs = 120
+    epochs = 100
 
-    print(f"Training examples: {len(dataset)}")
-    print(f"Batches per epoch: {len(loader)}")
+    print(f"Training examples: {len(training_dataset)}")
+    print(f"Validation examples: {len(validation_dataset)}")
+    print(f"Training batches per epoch: {len(training_loader)}")
 
-    for epoch in range(start_epoch, epochs + 1):
+    for epoch in range(
+        start_epoch,
+        epochs + 1,
+    ):
         # train_epoch performs:
         #
         # batch
@@ -127,42 +151,63 @@ def main() -> None:
         #   -> gradients
         #   -> optimizer step
         #
-        # for every batch in the DataLoader.
-        mean_loss = train_epoch(model, loader, optimizer, loss_fn, device)
+        # for every batch in the training DataLoader.
+        mean_loss = train_epoch(
+            model,
+            training_loader,
+            optimizer,
+            loss_fn,
+            device,
+        )
 
-        # Evaluating every epoch would work for this tiny experiment,
-        # but normally evaluation has a cost.
+        # Evaluate every ten epochs.
         #
-        # Logging every ten epochs also keeps the output readable.
+        # Training accuracy tells us how well the model fits
+        # examples it is allowed to learn from.
+        #
+        # Validation accuracy measures performance on examples
+        # that never contribute gradients or optimizer updates.
         if epoch % 10 == 0:
             (
-                from_accuracy,
-                to_accuracy,
-                move_accuracy,
-            ) = evaluate(model, loader, device)
+                _train_from_acc,
+                _train_to_acc,
+                train_move_acc,
+            ) = evaluate(
+                model,
+                training_loader,
+                device,
+            )
 
-            # from_acc:
-            #   Did we predict the correct source square?
-            #
-            # to_acc:
-            #   Did we predict the correct destination square?
-            #
-            # move_acc:
-            #   Were from_square, to_square AND promotion all correct?
+            (
+                _val_from_acc,
+                _val_to_acc,
+                val_move_acc,
+            ) = evaluate(
+                model,
+                validation_loader,
+                device,
+            )
+
             print(
                 f"epoch={epoch:3d} "
                 f"loss={mean_loss:.4f} "
-                f"from_acc={from_accuracy:.2%} "
-                f"to_acc={to_accuracy:.2%} "
-                f"move_acc={move_accuracy:.2%}"
+                f"train_move_acc={train_move_acc:.2%} "
+                f"val_move_acc={val_move_acc:.2%}"
             )
-    # Save AFTER training has completed.
+
+    # Save the latest training state after the run has completed.
+    #
+    # The checkpoint contains:
+    # - model parameters
+    # - optimizer state
+    # - final epoch
     save_checkpoint(
         CHECKPOINT_PATH,
         model,
         optimizer,
         epoch=epochs,
     )
+
     print(f"Checkpoint saved: {CHECKPOINT_PATH}")
 
 
