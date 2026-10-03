@@ -26,6 +26,7 @@ def test_save_checkpoint_creates_file(
         model,
         optimizer,
         epoch=10,
+        best_val_move_acc=0.25,
     )
 
     assert checkpoint_path.exists()
@@ -48,6 +49,7 @@ def test_load_checkpoint_restores_training_state(
         original_model,
         original_optimizer,
         epoch=42,
+        best_val_move_acc=0.375,
     )
 
     # Create completely new objects.
@@ -61,7 +63,7 @@ def test_load_checkpoint_restores_training_state(
         lr=0.001,
     )
 
-    restored_epoch = load_checkpoint(
+    (restored_epoch, restored_best_val_move_acc) = load_checkpoint(
         checkpoint_path,
         restored_model,
         restored_optimizer,
@@ -69,6 +71,7 @@ def test_load_checkpoint_restores_training_state(
     )
 
     assert restored_epoch == 42
+    assert restored_best_val_move_acc == 0.375
 
     # Verify that every learned parameter was restored exactly.
     for original_parameter, restored_parameter in zip(

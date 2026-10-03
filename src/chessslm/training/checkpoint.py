@@ -10,20 +10,15 @@ def save_checkpoint(
     model: nn.Module,
     optimizer: Optimizer,
     epoch: int,
+    best_val_move_acc: float,
 ) -> None:
     """Save the current training state to disk.
 
-    A checkpoint lets us stop training and later continue from the
-    same state instead of starting again with random model weights.
+    In addition to model and optimizer state, the checkpoint stores the
+    best validation move accuracy seen so far.
 
-    We save more than just the model parameters:
-
-    - model_state_dict contains the learned model parameters.
-    - optimizer_state_dict contains Adam/SGD's internal state.
-    - epoch records where training stopped.
-
-    Together these describe the important state needed to resume
-    this training run.
+    This allows a resumed training run to keep comparing against the same
+    validation record instead of resetting "best" when the process restarts.
     """
 
     # Create the destination directory if it does not already exist.
@@ -38,6 +33,7 @@ def save_checkpoint(
         "model_state_dict": model.state_dict(),
         "optimizer_state_dict": optimizer.state_dict(),
         "epoch": epoch,
+        "best_val_move_acc": best_val_move_acc,
     }
 
     torch.save(
@@ -51,17 +47,12 @@ def load_checkpoint(
     model: nn.Module,
     optimizer: Optimizer,
     device: torch.device,
-) -> int:
-    """Restore model and optimizer state from a saved checkpoint.
+) -> tuple[int, float]:
+    """Restore model and optimizer state from a checkpoint.
 
-    Loading a checkpoint lets us continue a previous training run
-    instead of creating a new model with randomly initialized weights.
-
-    The model and optimizer objects are created by the caller first.
-    This function then replaces their current state with the values
-    stored in the checkpoint.
-
-    The returned epoch tells the caller where the saved run stopped.
+    Older checkpoints may not contain every field introduced in later
+    versions of the training pipeline. Missing validation history falls
+    back to 0.0 so older checkpoints can still be loaded.
     """
 
     # map_location controls which device the saved tensors are loaded onto.
@@ -82,4 +73,4 @@ def load_checkpoint(
 
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
-    return checkpoint["epoch"]
+    return checkpoint["epoch"], checkpoint.get("best_val_move_acc", 0.0)

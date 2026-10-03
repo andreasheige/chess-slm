@@ -20,6 +20,7 @@ from chessslm.training.train import evaluate, train_epoch
 # before introducing larger datasets and more complex models.
 PGN_PATH = Path("data/raw/MacKenzie.pgn")
 CHECKPOINT_PATH = Path("checkpoints/latest.pt")
+BEST_CHECKPOINT_PATH = Path("checkpoints/best.pt")
 
 
 def main() -> None:
@@ -106,6 +107,12 @@ def main() -> None:
     # Start from epoch 0 unless an existing checkpoint is restored.
     start_epoch = 0
 
+    # Track the best validation result seen during this training run.
+    #
+    # Unlike latest.pt, best.pt is only replaced when validation
+    # performance actually improves.
+    best_val_move_acc = 0.0
+
     # If a checkpoint exists, restore the previous training state.
     #
     # This restores:
@@ -115,7 +122,7 @@ def main() -> None:
     #
     # Training then continues from the following epoch.
     if CHECKPOINT_PATH.exists():
-        saved_epoch = load_checkpoint(
+        (saved_epoch, best_val_move_acc) = load_checkpoint(
             CHECKPOINT_PATH,
             model,
             optimizer,
@@ -124,10 +131,14 @@ def main() -> None:
 
         start_epoch = saved_epoch + 1
 
-        print(f"Checkpoint loaded: {CHECKPOINT_PATH} (epoch {saved_epoch})")
+        print(
+            f"Checkpoint loaded: {CHECKPOINT_PATH} "
+            f"(epoch {saved_epoch}, "
+            f"best_val_move_acc={best_val_move_acc:.2%})"
+        )
 
     # One epoch means one complete pass through the training dataset.
-    epochs = 100
+    epochs = 40
 
     print(f"Training examples: {len(training_dataset)}")
     print(f"Validation examples: {len(validation_dataset)}")
@@ -197,6 +208,29 @@ def main() -> None:
                 f"val_move={val_move_acc:.2%}"
             )
 
+            # Keep a separate checkpoint for the model that performs best on
+            # validation games.
+            #
+            # Training accuracy is intentionally NOT used here. The purpose of
+            # best.pt is to preserve the model that generalizes best to games
+            # that were never used for optimizer updates.
+            if val_move_acc > best_val_move_acc:
+                best_val_move_acc = val_move_acc
+
+                save_checkpoint(
+                    BEST_CHECKPOINT_PATH,
+                    model,
+                    optimizer,
+                    epoch=epoch,
+                    best_val_move_acc=best_val_move_acc,
+                )
+
+                print(
+                    f"New best checkpoint: "
+                    f"val_move_acc={best_val_move_acc:.2%} "
+                    f"epoch={epoch}"
+                )
+
     # Save the latest training state after the run has completed.
     #
     # The checkpoint contains:
@@ -208,6 +242,7 @@ def main() -> None:
         model,
         optimizer,
         epoch=epochs,
+        best_val_move_acc=best_val_move_acc,
     )
 
     print(f"Checkpoint saved: {CHECKPOINT_PATH}")
