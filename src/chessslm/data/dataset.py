@@ -22,4 +22,5 @@ class ChessDataset(Dataset):
             "promotion": torch.tensor(
                 encode_promotion(example.promotion), dtype=torch.long
             ),
+            "side_to_move": torch.tensor(example.side_to_move, dtype=torch.long),
         }

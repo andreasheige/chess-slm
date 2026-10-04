@@ -13,16 +13,14 @@ from chessslm.data.examples import (
 
 def test_training_example() -> None:
     example = TrainingExample(
-        board=[0] * 64,
-        from_square=6,
-        to_square=21,
-        promotion=None,
+        board=[0] * 64, from_square=6, to_square=21, promotion=None, side_to_move=0
     )
 
     assert len(example.board) == 64
     assert example.from_square == 6
     assert example.to_square == 21
     assert example.promotion is None
+    assert example.side_to_move == 0
 
 
 def test_create_training_example() -> None:
@@ -35,6 +33,7 @@ def test_create_training_example() -> None:
     assert example.from_square == chess.E2
     assert example.to_square == chess.E4
     assert example.promotion is None
+    assert example.side_to_move == 0
 
 
 def test_create_examples_from_game() -> None:

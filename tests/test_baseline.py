@@ -11,6 +11,11 @@ def test_baseline_output_shapes() -> None:
         dtype=torch.long,
     )
 
+    side_to_move = torch.tensor(
+        [0, 1, 0, 1],
+        dtype=torch.long,
+    )
+
     from_square = torch.tensor(
         [0, 1, 2, 3],
         dtype=torch.long,
@@ -18,6 +23,7 @@ def test_baseline_output_shapes() -> None:
 
     from_logits, to_logits, promotion_logits = model(
         board,
+        side_to_move,
         from_square,
     )
 

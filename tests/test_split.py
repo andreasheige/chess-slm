@@ -10,6 +10,7 @@ def make_example(index: int) -> TrainingExample:
         from_square=index,
         to_square=index + 1,
         promotion=None,
+        side_to_move=0,
     )
 
 

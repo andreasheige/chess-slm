@@ -16,7 +16,7 @@ class TrainingConfig:
     pgn_path: Path = Path("data/raw/MacKenzie.pgn")
 
     batch_size: int = 8
-    epochs: int = 20
+    epochs: int = 100
     learning_rate: float = 0.001
 
     validation_fraction: float = 0.2
@@ -24,5 +24,5 @@ class TrainingConfig:
 
     log_every: int = 10
 
-    experiment_name: str = "metrics_resume_test"
+    experiment_name: str = "baseline_v2_side_to_move"
     artifact_dir: Path = Path("artifacts")

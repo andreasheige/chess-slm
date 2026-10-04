@@ -13,6 +13,7 @@ class TrainingExample:
     from_square: int
     to_square: int
     promotion: int | None
+    side_to_move: int
 
 
 def create_training_example(
@@ -27,16 +28,28 @@ def create_training_example(
         from_square=from_square,
         to_square=to_square,
         promotion=promotion,
+        side_to_move=0 if board.turn == chess.WHITE else 1,
     )
 
 
-def create_examples_from_game(game: chess.pgn.Game) -> list[TrainingExample]:
+def create_examples_from_game(
+    game: chess.pgn.Game,
+) -> list[TrainingExample]:
     board = game.board()
     examples: list[TrainingExample] = []
 
     for move in game.mainline_moves():
-        example = create_training_example(board, move)
+        example = create_training_example(
+            board,
+            move,
+        )
+
         examples.append(example)
+
+        # Push happens AFTER the example is created.
+        #
+        # This is important because board.turn must describe
+        # the player who is about to make `move`.
         board.push(move)
 
     return examples

@@ -17,10 +17,17 @@ class ChessBaseline(nn.Module):
             embedding_dim=embedding_dim,
         )
 
+        # Learn a small vector representation for the side to move.
+        # There are only two possibilities: white or black.
+        self.side_to_move_embedding = nn.Embedding(
+            num_embeddings=2,
+            embedding_dim=embedding_dim,
+        )
+
         # Convert the complete embedded board into one shared
         # representation of the position.
         self.hidden = nn.Linear(
-            64 * embedding_dim,
+            64 * embedding_dim + embedding_dim,  # + side to move embedding
             hidden_dim,
         )
 
@@ -62,7 +69,8 @@ class ChessBaseline(nn.Module):
     def forward(
         self,
         board: torch.Tensor,
-        from_square: torch.Tensor,
+        side_to_move: torch.Tensor,
+        from_square: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # [B, 64]
         #      ↓
@@ -76,14 +84,30 @@ class ChessBaseline(nn.Module):
         # [B, 64 * embedding_dim]
         flattened = embedded.flatten(start_dim=1)
 
+        # Incorporate the side to move information:
+        # [B, 64 * embedding_dim] + [B, embedding_dim]
+        #              ↓
+        # [B, 64 * embedding_dim + embedding_dim]
+        side_embedding = self.side_to_move_embedding(side_to_move)
+
+        # Concatenate the flattened board representation with the side to move embedding.
+        # [B, 64 * embedding_dim + embedding_dim]
+        #             ↓
+        model_input = torch.cat([flattened, side_embedding], dim=1)
+
         # Build one shared representation of the board.
-        hidden = self.hidden(flattened)
+        hidden = self.hidden(model_input)
         hidden = torch.relu(hidden)
 
         # Source-square prediction:
         #
         # P(from | board)
         from_logits = self.from_head(hidden)
+
+        if from_square is None:
+            # During inference we don't know the source square.
+            # We can use the model's prediction instead.
+            from_square = torch.argmax(from_logits, dim=1)
 
         # During training we provide the correct source square.
         # This is teacher forcing.

@@ -8,16 +8,10 @@ from chessslm.data.examples import TrainingExample
 def test_dataset_length() -> None:
     examples = [
         TrainingExample(
-            board=[0] * 64,
-            from_square=6,
-            to_square=21,
-            promotion=None,
+            board=[0] * 64, from_square=6, to_square=21, promotion=None, side_to_move=0
         ),
         TrainingExample(
-            board=[0] * 64,
-            from_square=12,
-            to_square=28,
-            promotion=None,
+            board=[0] * 64, from_square=12, to_square=28, promotion=None, side_to_move=1
         ),
     ]
 
@@ -28,10 +22,7 @@ def test_dataset_length() -> None:
 
 def test_dataset_returns_tensors_by_index() -> None:
     example = TrainingExample(
-        board=[0] * 64,
-        from_square=6,
-        to_square=21,
-        promotion=None,
+        board=[0] * 64, from_square=6, to_square=21, promotion=None, side_to_move=0
     )
 
     dataset = ChessDataset([example])
@@ -52,32 +43,24 @@ def test_dataset_returns_tensors_by_index() -> None:
     assert item["promotion"].dtype == torch.long
     assert item["promotion"].item() == 0
 
+    assert item["side_to_move"].shape == torch.Size([])
+    assert item["side_to_move"].dtype == torch.long
+    assert item["side_to_move"].item() == 0
+
 
 def test_dataloader_batches_examples() -> None:
     examples = [
         TrainingExample(
-            board=[0] * 64,
-            from_square=6,
-            to_square=21,
-            promotion=None,
+            board=[0] * 64, from_square=6, to_square=21, promotion=None, side_to_move=0
         ),
         TrainingExample(
-            board=[1] * 64,
-            from_square=12,
-            to_square=28,
-            promotion=None,
+            board=[1] * 64, from_square=12, to_square=28, promotion=None, side_to_move=1
         ),
         TrainingExample(
-            board=[2] * 64,
-            from_square=1,
-            to_square=18,
-            promotion=None,
+            board=[2] * 64, from_square=1, to_square=18, promotion=None, side_to_move=0
         ),
         TrainingExample(
-            board=[3] * 64,
-            from_square=57,
-            to_square=42,
-            promotion=None,
+            board=[3] * 64, from_square=57, to_square=42, promotion=None, side_to_move=1
         ),
     ]
 
@@ -90,3 +73,4 @@ def test_dataloader_batches_examples() -> None:
     assert batch["from_square"].shape == torch.Size([4])
     assert batch["to_square"].shape == torch.Size([4])
     assert batch["promotion"].shape == torch.Size([4])
+    assert batch["side_to_move"].shape == torch.Size([4])

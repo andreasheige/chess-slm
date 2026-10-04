@@ -31,6 +31,10 @@ def test_training_step_returns_scalar_loss() -> None:
             [0, 0],
             dtype=torch.long,
         ),
+        "side_to_move": torch.tensor(
+            [0, 1],
+            dtype=torch.long,
+        ),
     }
 
     loss = training_step(
@@ -46,16 +50,10 @@ def test_training_step_returns_scalar_loss() -> None:
 def test_train_epoch_returns_mean_loss() -> None:
     examples = [
         TrainingExample(
-            board=[0] * 64,
-            from_square=12,
-            to_square=28,
-            promotion=None,
+            board=[0] * 64, from_square=12, to_square=28, promotion=None, side_to_move=0
         ),
         TrainingExample(
-            board=[0] * 64,
-            from_square=52,
-            to_square=36,
-            promotion=None,
+            board=[0] * 64, from_square=52, to_square=36, promotion=None, side_to_move=0
         ),
     ]
 
@@ -88,16 +86,10 @@ def test_train_epoch_returns_mean_loss() -> None:
 def test_evaluate_returns_accuracies() -> None:
     examples = [
         TrainingExample(
-            board=[0] * 64,
-            from_square=12,
-            to_square=28,
-            promotion=None,
+            board=[0] * 64, from_square=12, to_square=28, promotion=None, side_to_move=0
         ),
         TrainingExample(
-            board=[0] * 64,
-            from_square=52,
-            to_square=36,
-            promotion=None,
+            board=[0] * 64, from_square=52, to_square=36, promotion=None, side_to_move=0
         ),
     ]
 

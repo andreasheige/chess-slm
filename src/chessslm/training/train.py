@@ -16,6 +16,7 @@ def training_step(
 
     from_logits, to_logits, promotion_logits = model(
         batch["board"],
+        batch["side_to_move"],
         batch["from_square"],
     )
 
@@ -101,6 +102,7 @@ def evaluate(
 
             from_logits, to_logits, promotion_logits = model(
                 batch["board"],
+                batch["side_to_move"],
                 batch["from_square"],
             )
 
