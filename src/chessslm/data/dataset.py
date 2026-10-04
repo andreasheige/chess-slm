@@ -23,20 +23,4 @@ class ChessDataset(Dataset):
                 encode_promotion(example.promotion), dtype=torch.long
             ),
             "side_to_move": torch.tensor(example.side_to_move, dtype=torch.long),
-            "white_kingside_castling": torch.tensor(
-                example.white_kingside_castling,
-                dtype=torch.long,
-            ),
-            "white_queenside_castling": torch.tensor(
-                example.white_queenside_castling,
-                dtype=torch.long,
-            ),
-            "black_kingside_castling": torch.tensor(
-                example.black_kingside_castling,
-                dtype=torch.long,
-            ),
-            "black_queenside_castling": torch.tensor(
-                example.black_queenside_castling,
-                dtype=torch.long,
-            ),
         }

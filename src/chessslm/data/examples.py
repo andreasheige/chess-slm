@@ -15,11 +15,6 @@ class TrainingExample:
     promotion: int | None
     side_to_move: int
 
-    white_kingside_castling: int
-    white_queenside_castling: int
-    black_kingside_castling: int
-    black_queenside_castling: int
-
 
 def create_training_example(
     board: chess.Board,
@@ -34,10 +29,6 @@ def create_training_example(
         to_square=to_square,
         promotion=promotion,
         side_to_move=0 if board.turn == chess.WHITE else 1,
-        white_kingside_castling=int(board.has_kingside_castling_rights(chess.WHITE)),
-        white_queenside_castling=int(board.has_queenside_castling_rights(chess.WHITE)),
-        black_kingside_castling=int(board.has_kingside_castling_rights(chess.BLACK)),
-        black_queenside_castling=int(board.has_queenside_castling_rights(chess.BLACK)),
     )
 
 
