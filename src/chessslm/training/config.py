@@ -24,5 +24,5 @@ class TrainingConfig:
 
     log_every: int = 10
 
-    experiment_name: str = "baseline_v2_side_to_move"
+    experiment_name: str = "baseline_v3_castling_rights"
     artifact_dir: Path = Path("artifacts")

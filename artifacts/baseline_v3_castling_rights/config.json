@@ -1,0 +1,11 @@
+{
+  "pgn_path": "data/raw/MacKenzie.pgn",
+  "batch_size": 8,
+  "epochs": 100,
+  "learning_rate": 0.001,
+  "validation_fraction": 0.2,
+  "seed": 42,
+  "log_every": 10,
+  "experiment_name": "baseline_v3_castling_rights",
+  "artifact_dir": "artifacts"
+}

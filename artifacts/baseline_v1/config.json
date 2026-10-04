@@ -1,0 +1,13 @@
+{
+  "experiment_name": "baseline_v1",
+  "pgn_path": "data/raw/MacKenzie.pgn",
+  "batch_size": 8,
+  "epochs": 10,
+  "learning_rate": 0.001,
+  "validation_fraction": 0.2,
+  "seed": 42,
+  "log_every": 10,
+  "latest_checkpoint_path": "checkpoints/latest.pt",
+  "best_checkpoint_path": "checkpoints/best.pt",
+  "artifact_dir": "artifacts"
+}
