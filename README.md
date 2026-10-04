@@ -1,33 +1,47 @@
 # ChessSLM
 
-**Work in progress — a learning-first project exploring machine learning through chess.**
+**Learning machine learning from first principles, through chess.**
 
-ChessSLM follows the path from raw chess games to datasets, tensors, neural
-networks, training, and evaluation. The goal is to understand each step before
-adding more complex models or larger datasets.
+A small, fully tested PyTorch pipeline that goes from raw PGN games to
+tensors, a trained move-prediction model, and honest evaluation, built one
+validated step at a time on the way to a transformer and an autoregressive
+chess language model.
 
-The current implementation is a small supervised move-prediction model built
-with PyTorch. Given a board position, it learns to predict the move played in
-the dataset. Transformer and autoregressive language-model work are later goals;
-the current baseline uses embeddings and linear layers.
+> **Status:** work in progress. No playing-strength claims are made; see
+> [Limits of the current results](#limits-of-the-current-results).
 
-## Current state
+## Why this project
 
-The repository currently includes:
+I come from web development and spent the last years in DevOps, DevSecOps and
+developer experience. ChessSLM is where I apply that engineering discipline
+to ML: reproducible splits, pinned dependencies (`uv.lock`), pre-commit, CI,
+unit tests, and written design decisions ([ADRs](notes/decisions/)) before
+scaling anything up.
 
-- PGN loading and conversion of games into position–move examples.
-- Reproducible game-level training and validation splits.
-- Board and move encoding, a PyTorch dataset, and batched data loading.
-- A baseline model predicting source square, destination square, and promotion.
-- An explicit training loop using cross-entropy loss and Adam.
-- Source-square, destination-square, and full-move accuracy reporting.
-- Checkpoint saving and loading for model parameters, optimizer state, and epoch.
-- Automatic device selection: CUDA, then Apple Silicon MPS, then CPU.
-- Unit tests, Ruff checks, pre-commit hooks, and a GitHub Actions workflow.
+## Roadmap
 
-The project is still developing its training and evaluation pipeline. There is
-no published playing-strength benchmark, playable chess interface, or deployed
-service. APIs, representations, and scripts may change as the project evolves.
+- [x] PGN loading and position–move examples
+- [x] Reproducible game-level train/validation split
+- [x] Board and move encoding, PyTorch dataset and loaders
+- [x] Baseline model (embeddings + linear) with three prediction heads
+- [x] Training loop, accuracy metrics, checkpointing, CUDA/MPS/CPU selection
+- [x] Tests, Ruff, pre-commit, GitHub Actions
+- [ ] Full board state in the encoding (side to move, castling, en passant)
+- [ ] Inference-time evaluation and legal-move masking
+- [ ] Experiment tracking (dataset identity, split config, RNG state)
+- [ ] Attention / Transformer model
+- [ ] Autoregressive modeling
+- [ ] Stockfish evaluation, distillation, self-play, serving, MLOps
+
+Details in the [implementation plan](IMPLEMENTATION_PLAN.md).
+
+## Results
+
+| Model | Source acc. | Destination acc. | Full-move acc. | Data |
+|---|---|---|---|---|
+| Baseline (embeddings + linear) | _x %_ | _x %_ | _x %_ | _n games_ |
+
+_Teacher-forced evaluation, piece placement only. Fill in with your latest run._
 
 ## Setup
 
