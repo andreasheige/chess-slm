@@ -13,7 +13,12 @@ from chessslm.data.examples import (
 
 def test_training_example() -> None:
     example = TrainingExample(
-        board=[0] * 64, from_square=6, to_square=21, promotion=None, side_to_move=0
+        board=[0] * 64,
+        from_square=6,
+        to_square=21,
+        promotion=None,
+        side_to_move=0,
+        en_passant_square=64,
     )
 
     assert len(example.board) == 64
@@ -21,6 +26,7 @@ def test_training_example() -> None:
     assert example.to_square == 21
     assert example.promotion is None
     assert example.side_to_move == 0
+    assert example.en_passant_square == 64
 
 
 def test_create_training_example() -> None:
@@ -60,3 +66,23 @@ def test_create_examples_from_games_combines_games() -> None:
     examples = create_examples_from_games([first_game, second_game])
 
     assert len(examples) == 4
+
+
+def test_en_passant_square_is_captured_from_board_state() -> None:
+    game = chess.pgn.read_game(
+        io.StringIO(
+            """
+[Result "*"]
+
+1. e4 d5 *
+""".strip()
+        )
+    )
+
+    examples = create_examples_from_game(game)
+
+    # Before White plays e4, there is no en-passant square.
+    assert examples[0].en_passant_square == 64
+
+    # After e4, Black could capture en passant on e3.
+    assert examples[1].en_passant_square == chess.E3

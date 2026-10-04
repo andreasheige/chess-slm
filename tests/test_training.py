@@ -50,10 +50,20 @@ def test_training_step_returns_scalar_loss() -> None:
 def test_train_epoch_returns_mean_loss() -> None:
     examples = [
         TrainingExample(
-            board=[0] * 64, from_square=12, to_square=28, promotion=None, side_to_move=0
+            board=[0] * 64,
+            from_square=12,
+            to_square=28,
+            promotion=None,
+            side_to_move=0,
+            en_passant_square=64,
         ),
         TrainingExample(
-            board=[0] * 64, from_square=52, to_square=36, promotion=None, side_to_move=0
+            board=[0] * 64,
+            from_square=52,
+            to_square=36,
+            promotion=None,
+            side_to_move=0,
+            en_passant_square=64,
         ),
     ]
 
@@ -86,10 +96,20 @@ def test_train_epoch_returns_mean_loss() -> None:
 def test_evaluate_returns_accuracies() -> None:
     examples = [
         TrainingExample(
-            board=[0] * 64, from_square=12, to_square=28, promotion=None, side_to_move=0
+            board=[0] * 64,
+            from_square=12,
+            to_square=28,
+            promotion=None,
+            side_to_move=0,
+            en_passant_square=64,
         ),
         TrainingExample(
-            board=[0] * 64, from_square=52, to_square=36, promotion=None, side_to_move=0
+            board=[0] * 64,
+            from_square=52,
+            to_square=36,
+            promotion=None,
+            side_to_move=0,
+            en_passant_square=64,
         ),
     ]
 

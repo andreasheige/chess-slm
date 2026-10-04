@@ -14,6 +14,7 @@ class TrainingExample:
     to_square: int
     promotion: int | None
     side_to_move: int
+    en_passant_square: int
 
 
 def create_training_example(
@@ -22,6 +23,7 @@ def create_training_example(
 ) -> TrainingExample:
     encoded_board = encode_board(board)
     from_square, to_square, promotion = encode_move(move)
+    en_passant_square = board.ep_square if board.ep_square is not None else 64
 
     return TrainingExample(
         board=encoded_board,
@@ -29,6 +31,7 @@ def create_training_example(
         to_square=to_square,
         promotion=promotion,
         side_to_move=0 if board.turn == chess.WHITE else 1,
+        en_passant_square=en_passant_square,
     )
 
 
