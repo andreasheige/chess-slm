@@ -19,6 +19,26 @@ def test_training_step_returns_scalar_loss() -> None:
             (2, 64),
             dtype=torch.long,
         ),
+        "side_to_move": torch.tensor(
+            [0, 1],
+            dtype=torch.long,
+        ),
+        "white_kingside_castling": torch.tensor(
+            [1, 1],
+            dtype=torch.long,
+        ),
+        "white_queenside_castling": torch.tensor(
+            [1, 0],
+            dtype=torch.long,
+        ),
+        "black_kingside_castling": torch.tensor(
+            [1, 1],
+            dtype=torch.long,
+        ),
+        "black_queenside_castling": torch.tensor(
+            [1, 0],
+            dtype=torch.long,
+        ),
         "from_square": torch.tensor(
             [12, 52],
             dtype=torch.long,
@@ -29,10 +49,6 @@ def test_training_step_returns_scalar_loss() -> None:
         ),
         "promotion": torch.tensor(
             [0, 0],
-            dtype=torch.long,
-        ),
-        "side_to_move": torch.tensor(
-            [0, 1],
             dtype=torch.long,
         ),
     }
@@ -50,10 +66,26 @@ def test_training_step_returns_scalar_loss() -> None:
 def test_train_epoch_returns_mean_loss() -> None:
     examples = [
         TrainingExample(
-            board=[0] * 64, from_square=12, to_square=28, promotion=None, side_to_move=0
+            board=[0] * 64,
+            from_square=12,
+            to_square=28,
+            promotion=None,
+            side_to_move=0,
+            white_kingside_castling=1,
+            white_queenside_castling=1,
+            black_kingside_castling=1,
+            black_queenside_castling=1,
         ),
         TrainingExample(
-            board=[0] * 64, from_square=52, to_square=36, promotion=None, side_to_move=0
+            board=[0] * 64,
+            from_square=52,
+            to_square=36,
+            promotion=None,
+            side_to_move=0,
+            white_kingside_castling=1,
+            white_queenside_castling=1,
+            black_kingside_castling=1,
+            black_queenside_castling=1,
         ),
     ]
 
@@ -86,10 +118,26 @@ def test_train_epoch_returns_mean_loss() -> None:
 def test_evaluate_returns_accuracies() -> None:
     examples = [
         TrainingExample(
-            board=[0] * 64, from_square=12, to_square=28, promotion=None, side_to_move=0
+            board=[0] * 64,
+            from_square=12,
+            to_square=28,
+            promotion=None,
+            side_to_move=0,
+            white_kingside_castling=1,
+            white_queenside_castling=1,
+            black_kingside_castling=1,
+            black_queenside_castling=1,
         ),
         TrainingExample(
-            board=[0] * 64, from_square=52, to_square=36, promotion=None, side_to_move=0
+            board=[0] * 64,
+            from_square=52,
+            to_square=36,
+            promotion=None,
+            side_to_move=0,
+            white_kingside_castling=1,
+            white_queenside_castling=1,
+            black_kingside_castling=1,
+            black_queenside_castling=1,
         ),
     ]
 

@@ -11,6 +11,10 @@ def make_example(index: int) -> TrainingExample:
         to_square=index + 1,
         promotion=None,
         side_to_move=0,
+        white_kingside_castling=1,
+        white_queenside_castling=1,
+        black_kingside_castling=1,
+        black_queenside_castling=1,
     )
 
 

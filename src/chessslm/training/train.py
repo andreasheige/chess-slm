@@ -14,9 +14,17 @@ def training_step(
 ) -> torch.Tensor:
     """Compute the combined loss for one training batch."""
 
+    # The model receives both the board itself and additional game state.
+    #
+    # from_square is also supplied during training so the destination
+    # head can learn P(to_square | board state, from_square).
     from_logits, to_logits, promotion_logits = model(
         batch["board"],
         batch["side_to_move"],
+        batch["white_kingside_castling"],
+        batch["white_queenside_castling"],
+        batch["black_kingside_castling"],
+        batch["black_queenside_castling"],
         batch["from_square"],
     )
 
@@ -103,6 +111,10 @@ def evaluate(
             from_logits, to_logits, promotion_logits = model(
                 batch["board"],
                 batch["side_to_move"],
+                batch["white_kingside_castling"],
+                batch["white_queenside_castling"],
+                batch["black_kingside_castling"],
+                batch["black_queenside_castling"],
                 batch["from_square"],
             )
 

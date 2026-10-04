@@ -27,7 +27,7 @@ class ChessBaseline(nn.Module):
         # Convert the complete embedded board into one shared
         # representation of the position.
         self.hidden = nn.Linear(
-            64 * embedding_dim + embedding_dim,  # + side to move embedding
+            64 * embedding_dim + embedding_dim + 4,  # 4 extra for castling rights
             hidden_dim,
         )
 
@@ -70,6 +70,10 @@ class ChessBaseline(nn.Module):
         self,
         board: torch.Tensor,
         side_to_move: torch.Tensor,
+        white_kingside_castling: torch.Tensor,
+        white_queenside_castling: torch.Tensor,
+        black_kingside_castling: torch.Tensor,
+        black_queenside_castling: torch.Tensor,
         from_square: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # [B, 64]
@@ -84,16 +88,30 @@ class ChessBaseline(nn.Module):
         # [B, 64 * embedding_dim]
         flattened = embedded.flatten(start_dim=1)
 
-        # Incorporate the side to move information:
-        # [B, 64 * embedding_dim] + [B, embedding_dim]
-        #              ↓
-        # [B, 64 * embedding_dim + embedding_dim]
+        # Embed the side to move:
+        # [B]
+        #  ↓
+        # [B, embedding_dim]
         side_embedding = self.side_to_move_embedding(side_to_move)
+
+        # Concatenate the side to move embedding with the flattened board representation.
+        # [B]
+        #  ↓
+        # [B, embedding_dim]
+        castling_features = torch.stack(
+            [
+                white_kingside_castling,
+                white_queenside_castling,
+                black_kingside_castling,
+                black_queenside_castling,
+            ],
+            dim=1,
+        ).float()
 
         # Concatenate the flattened board representation with the side to move embedding.
         # [B, 64 * embedding_dim + embedding_dim]
         #             ↓
-        model_input = torch.cat([flattened, side_embedding], dim=1)
+        model_input = torch.cat([flattened, side_embedding, castling_features], dim=1)
 
         # Build one shared representation of the board.
         hidden = self.hidden(model_input)

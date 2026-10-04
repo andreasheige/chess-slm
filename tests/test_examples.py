@@ -13,7 +13,15 @@ from chessslm.data.examples import (
 
 def test_training_example() -> None:
     example = TrainingExample(
-        board=[0] * 64, from_square=6, to_square=21, promotion=None, side_to_move=0
+        board=[0] * 64,
+        from_square=6,
+        to_square=21,
+        promotion=None,
+        side_to_move=0,
+        white_kingside_castling=1,
+        white_queenside_castling=1,
+        black_kingside_castling=1,
+        black_queenside_castling=1,
     )
 
     assert len(example.board) == 64
@@ -21,6 +29,10 @@ def test_training_example() -> None:
     assert example.to_square == 21
     assert example.promotion is None
     assert example.side_to_move == 0
+    assert example.white_kingside_castling == 1
+    assert example.white_queenside_castling == 1
+    assert example.black_kingside_castling == 1
+    assert example.black_queenside_castling == 1
 
 
 def test_create_training_example() -> None:
@@ -60,3 +72,51 @@ def test_create_examples_from_games_combines_games() -> None:
     examples = create_examples_from_games([first_game, second_game])
 
     assert len(examples) == 4
+
+
+def test_castling_rights_change_after_king_moves() -> None:
+    game = chess.pgn.read_game(
+        io.StringIO(
+            """
+[Result "*"]
+
+1. e4 e5
+2. Ke2 *
+""".strip()
+        )
+    )
+
+    examples = create_examples_from_game(game)
+
+    # Before White's first move, both White castling rights exist.
+    assert examples[0].white_kingside_castling == 1
+    assert examples[0].white_queenside_castling == 1
+
+    # Before White plays Ke2, the king is still on e1 and castling
+    # rights still exist.
+    assert examples[2].white_kingside_castling == 1
+    assert examples[2].white_queenside_castling == 1
+
+
+def test_castling_rights_are_removed_after_king_moves() -> None:
+    game = chess.pgn.read_game(
+        io.StringIO(
+            """
+[Result "*"]
+
+1. e4 e5
+2. Ke2 Nc6 *
+""".strip()
+        )
+    )
+
+    examples = create_examples_from_game(game)
+
+    # Before White moves the king, both White castling rights exist.
+    assert examples[2].white_kingside_castling == 1
+    assert examples[2].white_queenside_castling == 1
+
+    # The next example is created after Ke2 has been played.
+    # White has permanently lost both castling rights.
+    assert examples[3].white_kingside_castling == 0
+    assert examples[3].white_queenside_castling == 0
